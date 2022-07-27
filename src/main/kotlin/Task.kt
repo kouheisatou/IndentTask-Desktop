@@ -1,32 +1,22 @@
-import Task.Count.count
+import Task.TaskFactory.count
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.util.Date
 
-open class Task(protected var parent: Task?) {
+open class Task(parent: Task?) {
 
-    object Count{
-        var count = 0
-    }
-
-//    constructor(parent: Task?){
-//        this.parent = parent
-//    }
-//    protected var parent: Task? = null
-//        set(value) {
-//            println("${parent?.id}, ${parent?.depth}")
-//            depth = parent?.depth?.plus(1) ?: 0
-//            field = value
-//        }
+    protected var parent: Task? = parent
+        set(value) {
+            depth = value?.depth?.plus(1) ?: 0
+            field = value
+        }
     protected val id = (count++)
     protected var content = mutableStateOf("")
     protected var isDone = mutableStateOf(false)
@@ -41,10 +31,10 @@ open class Task(protected var parent: Task?) {
         }
 
     init {
-        depth = if (parent == null) {
+        this.depth = if (parent == null) {
             0
         }else{
-            parent!!.depth + 1
+            parent.depth + 1
         }
     }
 
@@ -60,7 +50,6 @@ open class Task(protected var parent: Task?) {
         val parentIndex = newParent.childTasks.indexOf(parent)
 
         this.parent = newParent
-        this.depth = newParent.depth + 1
         newParent.childTasks.add(parentIndex+1, this)
 
         parent.childTasks.remove(this)
@@ -74,10 +63,39 @@ open class Task(protected var parent: Task?) {
 
         val newParent = parent.childTasks[currentIndex-1]
         this.parent = newParent
-        this.depth = newParent.depth + 1
         newParent.childTasks.add(this)
 
         parent.childTasks.remove(this)
+    }
+
+    private fun swap(targetTaskIndex: Int){
+        val parent = parent ?: return
+
+        val temp = this
+        parent.childTasks.remove(this)
+        parent.childTasks.add(targetTaskIndex, temp)
+    }
+
+    fun moveUp(){
+        val parent = parent ?: return
+
+        val aboveTaskIndex = parent.childTasks.indexOf(this) -1
+        if(aboveTaskIndex < 0){
+            return
+        }
+
+        swap(aboveTaskIndex)
+    }
+
+    fun moveDown(){
+        val parent = parent ?: return
+
+        val belowTaskIndex = parent.childTasks.indexOf(this) +1
+        if(belowTaskIndex < 0){
+            return
+        }
+
+        swap(belowTaskIndex)
     }
 
     override fun toString(): String {
@@ -93,50 +111,81 @@ open class Task(protected var parent: Task?) {
         return result.toString()
     }
 
-    @Composable
-    open fun show(){
-        Row(modifier = Modifier.padding(start = ((depth-1)*20).dp)) {
-            Checkbox(
-                checked = isDone.value,
-                onCheckedChange = {
-                    isDone.value = it
-                },
-            )
-            OutlinedTextField(
-                value = content.value,
-                onValueChange = {
-                    content.value = it
-                },
-            )
-            Button(
-                onClick = {
-                    createNewTask()
-                },
-            ){
-                Text("newTask")
+    object TaskFactory{
+        var count = 0
+
+        @Composable
+        fun Task(task: Task){
+
+            Row(modifier = Modifier.padding(start = ((task.depth-1)*20).dp)) {
+                Checkbox(
+                    checked = task.isDone.value,
+                    onCheckedChange = {
+                        task.isDone.value = it
+                    },
+                )
+                OutlinedTextField(
+                    value = task.content.value,
+                    onValueChange = {
+                        task.content.value = it
+                    },
+                )
+                Button(
+                    onClick = {
+                        task.createNewTask()
+                    },
+                ){
+                    Text("new")
+                }
+                Button(
+                    onClick = {
+                        task.indentLeft()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("<")
+                }
+                Button(
+                    onClick = {
+                        task.indentRight()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text(">")
+                }
+                Button(
+                    onClick = {
+                        task.moveUp()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("^")
+                }
+                Button(
+                    onClick = {
+                        task.moveDown()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("v")
+                }
             }
-            Button(
-                onClick = {
-                    indentLeft()
-                    println(rootTask.toString())
-                },
-            ){
-                Text("<")
-            }
-            Button(
-                onClick = {
-                    indentRight()
-                    println(rootTask.toString())
-                },
-            ){
-                Text(">")
+
+            Column {
+                task.childTasks.forEach {
+                    Task(it)
+                }
             }
         }
 
-        Column {
-            for(task in childTasks){
-                task.show()
+        @Composable
+        fun Task(task: RootTask){
+            Column {
+                task.childTasks.forEach {
+                    Task(it)
+                }
             }
         }
     }
+
 }

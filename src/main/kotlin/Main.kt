@@ -16,7 +16,7 @@ val rootTask = RootTask()
 @Composable
 @Preview
 fun App() {
-    rootTask.show()
+    Task.TaskFactory.Task(rootTask)
 }
 
 fun main() = application {

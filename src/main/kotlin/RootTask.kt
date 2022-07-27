@@ -3,20 +3,10 @@ import androidx.compose.runtime.Composable
 
 class RootTask : Task(null) {
     init {
-        createNewTask()
+        childTasks.add(Task(parent))
     }
 
     override fun createNewTask() {
-
         childTasks.add(Task(this))
-    }
-
-    @Composable
-    override fun show() {
-        Column {
-            for(task in childTasks){
-                task.show()
-            }
-        }
     }
 }
