@@ -6,6 +6,7 @@ import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.util.Date
@@ -121,19 +122,32 @@ open class Task(parent: Task?) {
         @Composable
         fun Task(task: Task){
 
-            Row(modifier = Modifier.padding(start = ((task.depth-1)*40).dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // ----indent----
+                val modifier = Modifier.padding(horizontal = ((task.depth-1)*20).dp)
+                if(task.parent is RootTask){
+                    Text("", modifier = modifier)
+                }
+                // if task is last of parent
+                else if(task.parent?.childTasks?.indexOf(task) == (task.parent?.childTasks?.size ?: -1)-1){
+                    Text("┗", modifier = modifier)
+                }
+                else{
+                    Text("┣", modifier = modifier)
+                }
+
                 Checkbox(
                     checked = task.isDone.value,
                     onCheckedChange = {
                         task.isDone.value = it
                     },
                 )
-                Text("${task.id}:${task.parent?.id}")
                 OutlinedTextField(
                     value = task.content.value,
                     onValueChange = {
                         task.content.value = it
                     },
+                    label = { Text("${task.id}:${task.parent?.id}")}
                 )
                 Button(
                     onClick = {
