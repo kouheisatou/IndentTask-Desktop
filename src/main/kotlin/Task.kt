@@ -1,3 +1,5 @@
+import RootTask.Resource.focusedTask
+import RootTask.Resource.rootTask
 import Task.TaskFactory.count
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import java.util.Date
 
@@ -41,6 +44,7 @@ open class Task(parent: Task?) {
 
     open fun createNewTask(){
         parent!!.childTasks.add(Task(parent))
+        parent!!.isAllChildrenDone()
     }
 
     fun indentLeft(){
@@ -54,6 +58,7 @@ open class Task(parent: Task?) {
         newParent.childTasks.add(parentIndex+1, this)
 
         parent.childTasks.remove(this)
+        parent.isAllChildrenDone()
     }
 
     fun indentRight(){
@@ -67,6 +72,7 @@ open class Task(parent: Task?) {
         newParent.childTasks.add(this)
 
         parent.childTasks.remove(this)
+        parent.isAllChildrenDone()
     }
 
     private fun swap(targetTaskIndex: Int){
@@ -92,7 +98,6 @@ open class Task(parent: Task?) {
         val belowTaskIndex = parent.childTasks.indexOf(this) +1
         if(belowTaskIndex >= parent.childTasks.size) return
 
-
         swap(belowTaskIndex)
     }
 
@@ -116,13 +121,36 @@ open class Task(parent: Task?) {
         return result.toString()
     }
 
-    fun isAllChildrenDone(): Boolean{
-        childTasks.forEach {
-            if(!it.isDone.value){
-                return false
+    fun isAllChildrenDone(){
+        if(childTasks.isNotEmpty()){
+            var allDone = true
+
+            childTasks.forEach {
+                if(!it.isDone.value){
+                    allDone = false
+                }
             }
+            isDone.value = allDone
         }
-        return true
+
+        parent?.isAllChildrenDone()
+    }
+
+    fun changeFocusUp(){
+        val parent = parent ?: return
+        if(focusedTask != this) return
+
+        val aboveTaskIndex = parent.childTasks.indexOf(this) -1
+        if(aboveTaskIndex < 0) return
+
+        focusedTask = parent.childTasks[aboveTaskIndex]
+
+
+    }
+
+    fun changeFocusDown(){
+        if(focusedTask != this) return
+
     }
 
     object TaskFactory{
@@ -133,7 +161,7 @@ open class Task(parent: Task?) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // ----indent----
-                val modifier = Modifier.padding(horizontal = ((task.depth-1)*20).dp)
+                val modifier = Modifier.padding(start = ((task.depth-1)*30).dp)
                 if(task.parent is RootTask){
                     Text("", modifier = modifier)
                 }
@@ -149,8 +177,7 @@ open class Task(parent: Task?) {
                     checked = task.isDone.value,
                     onCheckedChange = {
                         task.isDone.value = it
-
-                        task.parent?.isDone?.value = task.parent?.isAllChildrenDone() == true
+                        task.parent?.isAllChildrenDone()
                     },
                 )
                 OutlinedTextField(
@@ -158,7 +185,12 @@ open class Task(parent: Task?) {
                     onValueChange = {
                         task.content.value = it
                     },
-                    label = { Text("${task.id}:${task.parent?.id}")}
+                    label = { Text("${task.id}:${task.parent?.id}")},
+                    modifier = Modifier.onFocusChanged {
+                        if(it.isFocused){
+                            focusedTask = task
+                        }
+                    }
                 )
                 Button(
                     onClick = {
@@ -206,6 +238,14 @@ open class Task(parent: Task?) {
                     },
                 ){
                     Text("v")
+                }
+                Button(
+                    onClick = {
+                        task.changeFocusUp()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("focus^")
                 }
             }
 
