@@ -116,6 +116,15 @@ open class Task(parent: Task?) {
         return result.toString()
     }
 
+    fun isAllChildrenDone(): Boolean{
+        childTasks.forEach {
+            if(!it.isDone.value){
+                return false
+            }
+        }
+        return true
+    }
+
     object TaskFactory{
         var count = 0
 
@@ -140,6 +149,8 @@ open class Task(parent: Task?) {
                     checked = task.isDone.value,
                     onCheckedChange = {
                         task.isDone.value = it
+
+                        task.parent?.isDone?.value = task.parent?.isAllChildrenDone() == true
                     },
                 )
                 OutlinedTextField(
