@@ -80,9 +80,7 @@ open class Task(parent: Task?) {
         val parent = parent ?: return
 
         val aboveTaskIndex = parent.childTasks.indexOf(this) -1
-        if(aboveTaskIndex < 0){
-            return
-        }
+        if(aboveTaskIndex < 0) return
 
         swap(aboveTaskIndex)
     }
@@ -91,11 +89,17 @@ open class Task(parent: Task?) {
         val parent = parent ?: return
 
         val belowTaskIndex = parent.childTasks.indexOf(this) +1
-        if(belowTaskIndex < 0){
-            return
-        }
+        if(belowTaskIndex >= parent.childTasks.size) return
+
 
         swap(belowTaskIndex)
+    }
+
+    fun remove(){
+        val parent = parent ?: return
+
+        if(parent is RootTask && parent.childTasks.size == 1) return
+        parent.childTasks.remove(this)
     }
 
     override fun toString(): String {
@@ -117,13 +121,14 @@ open class Task(parent: Task?) {
         @Composable
         fun Task(task: Task){
 
-            Row(modifier = Modifier.padding(start = ((task.depth-1)*20).dp)) {
+            Row(modifier = Modifier.padding(start = ((task.depth-1)*40).dp)) {
                 Checkbox(
                     checked = task.isDone.value,
                     onCheckedChange = {
                         task.isDone.value = it
                     },
                 )
+                Text("${task.id}:${task.parent?.id}")
                 OutlinedTextField(
                     value = task.content.value,
                     onValueChange = {
@@ -136,6 +141,14 @@ open class Task(parent: Task?) {
                     },
                 ){
                     Text("new")
+                }
+                Button(
+                    onClick = {
+                        task.remove()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("rem")
                 }
                 Button(
                     onClick = {
