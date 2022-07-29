@@ -5,15 +5,10 @@ class RootTask : Task(null) {
     object Resource {
         val rootTask = RootTask()
         var focusedTask: Task? = null
-            set(value) {
-                field = value
-                focusSelectedTask()
-            }
 
         fun focusSelectedTask(){
             focusedTask ?: return
             focusedTask!!.focusRequester.value.requestFocus()
-            println("focused on ${focusedTask?.id}")
         }
     }
 

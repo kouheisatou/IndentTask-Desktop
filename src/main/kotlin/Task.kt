@@ -49,6 +49,7 @@ open class Task(parent: Task?) {
     open fun createNewTask(){
         val newTask = Task(parent)
         parent!!.childTasks.add(newTask)
+        focusedTask = newTask
     }
 
     fun indentLeft(){
