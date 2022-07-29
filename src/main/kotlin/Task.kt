@@ -1,3 +1,4 @@
+import RootTask.Resource.focusSelectedTask
 import RootTask.Resource.focusedTask
 import RootTask.Resource.rootTask
 import Task.TaskFactory.count
@@ -10,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import java.util.Date
@@ -21,11 +24,12 @@ open class Task(parent: Task?) {
             depth = value?.depth?.plus(1) ?: 0
             field = value
         }
-    protected val id = (count++)
+    val id = (count++)
     protected var content = mutableStateOf("")
     protected var isDone = mutableStateOf(false)
     protected var createdDate = Date()
     protected val childTasks = mutableStateListOf<Task>()
+    val focusRequester = mutableStateOf(FocusRequester())
     protected var depth = 0
         set(value) {
             for(child in childTasks){
@@ -43,8 +47,8 @@ open class Task(parent: Task?) {
     }
 
     open fun createNewTask(){
-        parent!!.childTasks.add(Task(parent))
-        parent!!.isAllChildrenDone()
+        val newTask = Task(parent)
+        parent!!.childTasks.add(newTask)
     }
 
     fun indentLeft(){
@@ -58,7 +62,8 @@ open class Task(parent: Task?) {
         newParent.childTasks.add(parentIndex+1, this)
 
         parent.childTasks.remove(this)
-        parent.isAllChildrenDone()
+
+        focusedTask?.focusRequester?.value?.requestFocus()
     }
 
     fun indentRight(){
@@ -72,7 +77,8 @@ open class Task(parent: Task?) {
         newParent.childTasks.add(this)
 
         parent.childTasks.remove(this)
-        parent.isAllChildrenDone()
+
+        focusedTask?.focusRequester?.value?.requestFocus()
     }
 
     private fun swap(targetTaskIndex: Int){
@@ -90,6 +96,8 @@ open class Task(parent: Task?) {
         if(aboveTaskIndex < 0) return
 
         swap(aboveTaskIndex)
+
+        focusedTask?.focusRequester?.value?.requestFocus()
     }
 
     fun moveDown(){
@@ -99,6 +107,8 @@ open class Task(parent: Task?) {
         if(belowTaskIndex >= parent.childTasks.size) return
 
         swap(belowTaskIndex)
+
+        focusedTask?.focusRequester?.value?.requestFocus()
     }
 
     fun remove(){
@@ -106,6 +116,7 @@ open class Task(parent: Task?) {
 
         if(parent is RootTask && parent.childTasks.size == 1) return
         parent.childTasks.remove(this)
+        focusedTask = null
     }
 
     override fun toString(): String {
@@ -119,6 +130,10 @@ open class Task(parent: Task?) {
             result.append(child.toString())
         }
         return result.toString()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return this.id == (other as Task).id
     }
 
     fun isAllChildrenDone(){
@@ -136,7 +151,7 @@ open class Task(parent: Task?) {
         parent?.isAllChildrenDone()
     }
 
-    fun changeFocusUp(){
+    fun moveFocusUp(){
         val parent = parent ?: return
         if(focusedTask != this) return
 
@@ -144,13 +159,28 @@ open class Task(parent: Task?) {
         if(aboveTaskIndex < 0) return
 
         focusedTask = parent.childTasks[aboveTaskIndex]
-
-
     }
 
-    fun changeFocusDown(){
+    fun moveFocusDown(){
+        val parent = parent ?: return
         if(focusedTask != this) return
 
+        val belowTaskIndex = parent.childTasks.indexOf(this) +1
+        if(belowTaskIndex >= parent.childTasks.size) return
+
+        focusedTask = parent.childTasks[belowTaskIndex]
+    }
+
+    override fun hashCode(): Int {
+        var result = parent?.hashCode() ?: 0
+        result = 31 * result + id
+        result = 31 * result + content.hashCode()
+        result = 31 * result + isDone.hashCode()
+        result = 31 * result + createdDate.hashCode()
+        result = 31 * result + childTasks.hashCode()
+        result = 31 * result + focusRequester.hashCode()
+        result = 31 * result + depth
+        return result
     }
 
     object TaskFactory{
@@ -158,6 +188,12 @@ open class Task(parent: Task?) {
 
         @Composable
         fun Task(task: Task){
+
+            // when compose succseeded
+            SideEffect {
+                task.parent?.isAllChildrenDone()
+                focusSelectedTask()
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // ----indent----
@@ -177,7 +213,7 @@ open class Task(parent: Task?) {
                     checked = task.isDone.value,
                     onCheckedChange = {
                         task.isDone.value = it
-                        task.parent?.isAllChildrenDone()
+                        println(rootTask.toString())
                     },
                 )
                 OutlinedTextField(
@@ -186,15 +222,18 @@ open class Task(parent: Task?) {
                         task.content.value = it
                     },
                     label = { Text("${task.id}:${task.parent?.id}")},
-                    modifier = Modifier.onFocusChanged {
-                        if(it.isFocused){
-                            focusedTask = task
+                    modifier = Modifier
+                        .onFocusChanged {
+                            if(it.isFocused){
+                                focusedTask = task
+                            }
                         }
-                    }
+                        .focusRequester(focusRequester = task.focusRequester.value)
                 )
                 Button(
                     onClick = {
                         task.createNewTask()
+                        println(rootTask.toString())
                     },
                 ){
                     Text("new")
@@ -241,20 +280,28 @@ open class Task(parent: Task?) {
                 }
                 Button(
                     onClick = {
-                        task.changeFocusUp()
+                        task.moveFocusUp()
                         println(rootTask.toString())
                     },
                 ){
                     Text("focus^")
                 }
-            }
-
-            Column {
-                task.childTasks.forEach {
-                    Task(it)
+                Button(
+                    onClick = {
+                        task.moveFocusDown()
+                        println(rootTask.toString())
+                    },
+                ){
+                    Text("focusv")
                 }
             }
+
+            task.childTasks.forEach {
+                Task(it)
+            }
         }
+
+
 
         @Composable
         fun Task(task: RootTask){
@@ -265,5 +312,4 @@ open class Task(parent: Task?) {
             }
         }
     }
-
 }

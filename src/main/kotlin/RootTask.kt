@@ -1,13 +1,20 @@
-import androidx.compose.foundation.layout.Column
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.focus.FocusManager
+import RootTask.Resource.focusedTask
 
 class RootTask : Task(null) {
 
     object Resource {
         val rootTask = RootTask()
         var focusedTask: Task? = null
-        lateinit var focusManager: FocusManager
+            set(value) {
+                field = value
+                focusSelectedTask()
+            }
+
+        fun focusSelectedTask(){
+            focusedTask ?: return
+            focusedTask!!.focusRequester.value.requestFocus()
+            println("focused on ${focusedTask?.id}")
+        }
     }
 
     init {
@@ -16,5 +23,9 @@ class RootTask : Task(null) {
 
     override fun createNewTask() {
         childTasks.add(Task(this))
+    }
+
+    override fun toString(): String {
+        return "focusedTaskId=${focusedTask?.id}, " + super.toString()
     }
 }
