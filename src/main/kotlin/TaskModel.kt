@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import java.util.Date
@@ -20,6 +21,7 @@ open class TaskModel(parent: TaskModel?) {
     var isDone = mutableStateOf(false)
     var createdDate = Date()
     var childTaskModels: SnapshotStateList<TaskModel> = SnapshotStateList()
+    val focusRequester = mutableStateOf(FocusRequester())
     var depth = 0
         set(value) {
             for (child in childTaskModels) {

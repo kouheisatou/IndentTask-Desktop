@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -22,14 +23,16 @@ fun Task(taskModel: TaskModel) {
     // when compose succseeded
     SideEffect {
         taskModel.parent?.isAllChildrenDone()
-        println(rootTask.toString())
+        if(rootTask.focusedTaskModel.value == taskModel){
+            taskModel.focusRequester.value.requestFocus()
+        }
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.background(
             if (rootTask.focusedTaskModel.value == taskModel) {
-                Color.Gray
+                Color.LightGray
             } else {
                 Color.Transparent
             }
@@ -61,12 +64,19 @@ fun Task(taskModel: TaskModel) {
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .focusable(false),
+                .focusable(false)
+                .onFocusChanged {
+                    if(it.isFocused){
+                        rootTask.focusedTaskModel.value = taskModel
+                    }
+                }
+                .focusRequester(focusRequester = taskModel.focusRequester.value),
             value = taskModel.content.value,
             onValueChange = {
                 taskModel.content.value = it
             },
             label = { Text("${taskModel.id}:${taskModel.parent?.id}") },
+            maxLines = 1,
         )
     }
 
