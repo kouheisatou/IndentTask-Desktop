@@ -117,13 +117,14 @@ open class TaskModel(parent: TaskModel?) {
         val parent = parent ?: return
         if (parent is RootTaskModel && parent.childTaskModels.size == 1) return
 
+        rootTask.focusedTaskModel.value = if (parent is RootTaskModel) {
+            getAboveTask() ?: parent.childTaskModels[0]
+        } else {
+            getAboveTask() ?: parent
+        }
+
         parent.childTaskModels.remove(this)
 
-        rootTask.focusedTaskModel.value = if (parent is RootTaskModel) {
-            childTaskModels[0]
-        } else {
-            parent
-        }
     }
 
     override fun toString(): String {
