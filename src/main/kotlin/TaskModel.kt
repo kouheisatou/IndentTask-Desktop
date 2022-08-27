@@ -151,19 +151,33 @@ open class TaskModel(parent: TaskModel?) {
         return (other is TaskModel && this.id == other.id)
     }
 
-    fun isAllChildrenDone() {
-        if (childTaskModels.isNotEmpty()) {
-            var allDone = true
+    fun done(value: Boolean, checkParent: Boolean = true) {
+        isDone.value = value
 
-            childTaskModels.forEach {
-                if (!it.isDone.value) {
-                    allDone = false
-                }
-            }
-            isDone.value = allDone
+        childTaskModels.forEach{
+            it.done(value, false)
         }
 
+        if(checkParent){
+            var parent = parent ?: return
+            while (parent !is RootTaskModel){
+                parent.isDone.value = parent.isAllChildrenDone()
+                parent = parent.parent ?: break
+            }
+        }
+    }
+
+    fun isAllChildrenDone(): Boolean {
+        var allDone = true
+
+        childTaskModels.forEach {
+            if (!it.isDone.value) {
+                allDone = false
+            }
+        }
         parent?.isAllChildrenDone()
+
+        return allDone
     }
 
     fun moveFocusUp() {
@@ -190,18 +204,18 @@ open class TaskModel(parent: TaskModel?) {
     fun moveFocusDown() {
         if (rootTask.focusedTaskModel.value != this) return
 
-        rootTask.focusedTaskModel.value = if(childTaskModels.isEmpty()) {
+        rootTask.focusedTaskModel.value = if (childTaskModels.isEmpty()) {
             val belowTask = getBelowTask()
-            if(belowTask != null){
+            if (belowTask != null) {
                 belowTask
-            }else{
+            } else {
                 var parent = parent ?: return
-                while(parent.getBelowTask() == null){
+                while (parent.getBelowTask() == null) {
                     parent = parent.parent ?: return
                 }
                 parent.getBelowTask() ?: return
             }
-        }else{
+        } else {
             childTaskModels.first()
         }
     }

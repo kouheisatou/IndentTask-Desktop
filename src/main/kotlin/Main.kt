@@ -33,7 +33,7 @@ fun main() = application {
                     Key.PageUp -> rootTask.focusedTaskModel.value.moveUp()
                     Key.PageDown -> rootTask.focusedTaskModel.value.moveDown()
                     Key.Backspace -> rootTask.focusedTaskModel.value.remove()
-                    Key.C -> rootTask.focusedTaskModel.value.isDone.value = !rootTask.focusedTaskModel.value.isDone.value
+                    Key.C -> rootTask.focusedTaskModel.value.done(!rootTask.focusedTaskModel.value.isDone.value)
                 }
             }
             true

@@ -22,7 +22,6 @@ fun Task(taskModel: TaskModel) {
 
     // when compose succseeded
     SideEffect {
-        taskModel.parent?.isAllChildrenDone()
         if(rootTask.focusedTaskModel.value == taskModel){
             taskModel.focusRequester.value.requestFocus()
         }
@@ -58,7 +57,7 @@ fun Task(taskModel: TaskModel) {
             modifier = Modifier.focusable(false),
             checked = taskModel.isDone.value,
             onCheckedChange = {
-                taskModel.isDone.value = it
+                taskModel.done(it)
             },
         )
         OutlinedTextField(
