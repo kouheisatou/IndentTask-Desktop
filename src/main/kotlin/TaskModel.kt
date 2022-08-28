@@ -2,12 +2,8 @@ import RootTaskModel.Resource.rootTask
 import RootTaskModel.Resource.tasksCount
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.unit.dp
-import java.util.Date
+import java.util.*
 
 open class TaskModel(parent: TaskModel?) {
 
@@ -19,7 +15,7 @@ open class TaskModel(parent: TaskModel?) {
     val id = (tasksCount++)
     var content = mutableStateOf("")
     var isDone = mutableStateOf(false)
-    var createdDate = Date()
+    val createdDate = Calendar.getInstance()
     var childTaskModels: SnapshotStateList<TaskModel> = SnapshotStateList()
     val focusRequester = mutableStateOf(FocusRequester())
     var depth = 0
@@ -42,7 +38,6 @@ open class TaskModel(parent: TaskModel?) {
         return if (childTaskModels.isEmpty()) {
             this
         } else {
-            println(childTaskModels.last().id)
             childTaskModels.last().getBottomTask()
         }
     }
@@ -67,8 +62,32 @@ open class TaskModel(parent: TaskModel?) {
 
     open fun createNewTask() {
         val newTaskModel = TaskModel(parent)
-        parent!!.childTaskModels.add(newTaskModel)
-        rootTask.focusedTaskModel.value = newTaskModel
+        createNewTask(newTaskModel)
+    }
+
+    open fun createNewTask(taskModel: TaskModel) {
+        val belowTask = getBelowTask()
+        if (belowTask != null) {
+            val belowTaskIndex = parent!!.childTaskModels.indexOf(belowTask)
+            parent!!.childTaskModels.add(belowTaskIndex, taskModel)
+        } else {
+            parent!!.childTaskModels.add(taskModel)
+        }
+
+        taskModel.done(value = false, checkParent = true)
+        rootTask.focusedTaskModel.value = taskModel
+    }
+
+    fun clone(parent: TaskModel? = this.parent): TaskModel {
+        val clone = TaskModel(parent)
+        clone.content.value = content.value
+        clone.isDone.value = isDone.value
+
+        childTaskModels.forEach {
+            clone.childTaskModels.add(it.clone(clone))
+        }
+
+        return clone
     }
 
     fun indentLeft() {
@@ -106,11 +125,15 @@ open class TaskModel(parent: TaskModel?) {
     }
 
     fun moveUp() {
-        swap(parent?.childTaskModels?.indexOf(getAboveTask()) ?: return)
+        val aboveTaskIndex = parent?.childTaskModels?.indexOf(getAboveTask()) ?: return
+        if (aboveTaskIndex < 0) return
+        swap(aboveTaskIndex)
     }
 
     fun moveDown() {
-        swap(parent?.childTaskModels?.indexOf(getBelowTask()) ?: return)
+        val belowTaskIndex = parent?.childTaskModels?.indexOf(getBelowTask()) ?: return
+        if (belowTaskIndex < 0) return
+        swap(belowTaskIndex)
     }
 
     fun remove() {
@@ -134,7 +157,7 @@ open class TaskModel(parent: TaskModel?) {
         }
         result.append(
             "${
-                if (rootTask.focusedTaskModel == this) {
+                if (rootTask.focusedTaskModel.value == this) {
                     "#"
                 } else {
                     ""
@@ -155,13 +178,13 @@ open class TaskModel(parent: TaskModel?) {
     fun done(value: Boolean, checkParent: Boolean = true) {
         isDone.value = value
 
-        childTaskModels.forEach{
+        childTaskModels.forEach {
             it.done(value, false)
         }
 
-        if(checkParent){
+        if (checkParent) {
             var parent = parent ?: return
-            while (parent !is RootTaskModel){
+            while (parent !is RootTaskModel) {
                 parent.isDone.value = parent.isAllChildrenDone()
                 parent = parent.parent ?: break
             }

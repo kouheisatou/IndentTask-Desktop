@@ -1,13 +1,13 @@
 import RootTaskModel.Resource.rootTask
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
@@ -22,7 +22,7 @@ fun Task(taskModel: TaskModel) {
 
     // when compose succseeded
     SideEffect {
-        if(rootTask.focusedTaskModel.value == taskModel){
+        if (rootTask.focusedTaskModel.value == taskModel) {
             taskModel.focusRequester.value.requestFocus()
         }
     }
@@ -60,12 +60,12 @@ fun Task(taskModel: TaskModel) {
                 taskModel.done(it)
             },
         )
-        OutlinedTextField(
+        TextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusable(false)
                 .onFocusChanged {
-                    if(it.isFocused){
+                    if (it.isFocused) {
                         rootTask.focusedTaskModel.value = taskModel
                     }
                 }
@@ -74,7 +74,7 @@ fun Task(taskModel: TaskModel) {
             onValueChange = {
                 taskModel.content.value = it
             },
-            label = { Text("${taskModel.id}:${taskModel.parent?.id}") },
+            label = { Text(taskModel.toString()) },
             maxLines = 1,
         )
     }

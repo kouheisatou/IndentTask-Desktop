@@ -11,10 +11,13 @@ class RootTaskModel : TaskModel(null) {
     var focusedTaskModel: MutableState<TaskModel>
     val text = mutableStateOf("")
 
+
     init {
         createNewTask()
         focusedTaskModel = mutableStateOf(childTaskModels[0])
     }
+
+    override fun createNewTask(taskModel: TaskModel) {}
 
     override fun createNewTask() {
         childTaskModels.add(TaskModel(this))
