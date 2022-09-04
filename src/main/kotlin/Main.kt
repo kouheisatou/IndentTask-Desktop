@@ -1,4 +1,5 @@
 import RootTaskModel.Resource.rootTask
+import RootTaskModel.Resource.undo
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -52,7 +53,12 @@ fun main() = application {
                     }
                     Key.D -> {
                         if (event.isMetaPressed) {
-                            rootTask.focusedTaskModel.value.createNewTask(rootTask.focusedTaskModel.value.clone())
+                            rootTask.focusedTaskModel.value.cloneAndInsert()
+                        }
+                    }
+                    Key.Z -> {
+                        if (event.isMetaPressed) {
+                            undo()
                         }
                     }
                 }

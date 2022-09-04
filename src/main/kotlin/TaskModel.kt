@@ -1,3 +1,4 @@
+import RootTaskModel.Resource.history
 import RootTaskModel.Resource.rootTask
 import RootTaskModel.Resource.tasksCount
 import androidx.compose.runtime.mutableStateOf
@@ -5,7 +6,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.focus.FocusRequester
 import java.util.*
 
-open class TaskModel(parent: TaskModel?) {
+open class TaskModel(parent: TaskModel?) : TaskModelInterface {
 
     var parent: TaskModel? = parent
         set(value) {
@@ -60,12 +61,17 @@ open class TaskModel(parent: TaskModel?) {
         return parent.childTaskModels.getOrNull(belowTaskIndex)
     }
 
-    open fun createNewTask() {
+    override fun createNewTask(addToHistory: Boolean) {
         val newTaskModel = TaskModel(parent)
         createNewTask(newTaskModel)
+
+        if (addToHistory) {
+            println("add_to_history : createNewTask")
+            history.add { createNewTask(false) }
+        }
     }
 
-    open fun createNewTask(taskModel: TaskModel) {
+    fun createNewTask(taskModel: TaskModel) {
         val belowTask = getBelowTask()
         if (belowTask != null) {
             val belowTaskIndex = parent!!.childTaskModels.indexOf(belowTask)
@@ -74,11 +80,12 @@ open class TaskModel(parent: TaskModel?) {
             parent!!.childTaskModels.add(taskModel)
         }
 
-        taskModel.done(value = false, checkParent = true)
+        taskModel.done(value = false, checkParent = true, addToHistory = false)
+
         rootTask.focusedTaskModel.value = taskModel
     }
 
-    fun clone(parent: TaskModel? = this.parent): TaskModel {
+    fun clone(parent: TaskModel?): TaskModel {
         val clone = TaskModel(parent)
         clone.content.value = content.value
         clone.isDone.value = isDone.value
@@ -90,7 +97,16 @@ open class TaskModel(parent: TaskModel?) {
         return clone
     }
 
-    fun indentLeft() {
+    override fun cloneAndInsert(addToHistory: Boolean) {
+        createNewTask(rootTask.focusedTaskModel.value.clone(parent))
+
+        if (addToHistory) {
+            println("add_to_history : cloneAndInsert")
+            history.add { createNewTask(false) }
+        }
+    }
+
+    override fun indentLeft(addToHistory: Boolean) {
         val parent = parent!!
 
         val newParent = parent.parent ?: return
@@ -101,9 +117,14 @@ open class TaskModel(parent: TaskModel?) {
         newParent.childTaskModels.add(parentIndex + 1, this)
 
         parent.childTaskModels.remove(this)
+
+        if (addToHistory) {
+            println("add_to_history : indentLeft")
+            history.add { indentLeft(false) }
+        }
     }
 
-    fun indentRight() {
+    override fun indentRight(addToHistory: Boolean) {
         val parent = parent!!
 
         val currentIndex = parent.childTaskModels.indexOf(this)
@@ -114,6 +135,11 @@ open class TaskModel(parent: TaskModel?) {
         newParent.childTaskModels.add(this)
 
         parent.childTaskModels.remove(this)
+
+        if (addToHistory) {
+            println("add_to_history : indentRight")
+            history.add { indentRight(false) }
+        }
     }
 
     private fun swap(targetTaskIndex: Int) {
@@ -124,19 +150,29 @@ open class TaskModel(parent: TaskModel?) {
         parent.childTaskModels.add(targetTaskIndex, temp)
     }
 
-    fun moveUp() {
+    override fun moveUp(addToHistory: Boolean) {
         val aboveTaskIndex = parent?.childTaskModels?.indexOf(getAboveTask()) ?: return
         if (aboveTaskIndex < 0) return
         swap(aboveTaskIndex)
+
+        if (addToHistory) {
+            println("add_to_history : moveUp")
+            history.add { moveUp(false) }
+        }
     }
 
-    fun moveDown() {
+    override fun moveDown(addToHistory: Boolean) {
         val belowTaskIndex = parent?.childTaskModels?.indexOf(getBelowTask()) ?: return
         if (belowTaskIndex < 0) return
         swap(belowTaskIndex)
+
+        if (addToHistory) {
+            println("add_to_history : moveDown")
+            history.add { moveDown(false) }
+        }
     }
 
-    fun remove() {
+    override fun remove(addToHistory: Boolean) {
         val parent = parent ?: return
         if (parent is RootTaskModel && parent.childTaskModels.size == 1) return
 
@@ -148,6 +184,10 @@ open class TaskModel(parent: TaskModel?) {
 
         parent.childTaskModels.remove(this)
 
+        if (addToHistory) {
+            println("add_to_history : remove")
+            history.add { remove(false) }
+        }
     }
 
     override fun toString(): String {
@@ -175,11 +215,11 @@ open class TaskModel(parent: TaskModel?) {
         return (other is TaskModel && this.id == other.id)
     }
 
-    fun done(value: Boolean, checkParent: Boolean = true) {
+    override fun done(value: Boolean, checkParent: Boolean, addToHistory: Boolean) {
         isDone.value = value
 
         childTaskModels.forEach {
-            it.done(value, false)
+            it.done(value, checkParent = false, addToHistory = false)
         }
 
         if (checkParent) {
@@ -189,9 +229,14 @@ open class TaskModel(parent: TaskModel?) {
                 parent = parent.parent ?: break
             }
         }
+
+        if (addToHistory) {
+            println("add_to_history : done")
+            history.add { done(value, checkParent, false) }
+        }
     }
 
-    fun isAllChildrenDone(): Boolean {
+    private fun isAllChildrenDone(): Boolean {
         var allDone = true
 
         childTaskModels.forEach {
@@ -204,7 +249,7 @@ open class TaskModel(parent: TaskModel?) {
         return allDone
     }
 
-    fun moveFocusUp() {
+    override fun moveFocusUp(addToHistory: Boolean) {
         val parent = parent ?: return
         if (rootTask.focusedTaskModel.value != this) return
 
@@ -223,9 +268,13 @@ open class TaskModel(parent: TaskModel?) {
             }
         }
 
+        if (addToHistory) {
+            println("add_to_history : moveFocusUp")
+            history.add { moveFocusUp(false) }
+        }
     }
 
-    fun moveFocusDown() {
+    override fun moveFocusDown(addToHistory: Boolean) {
         if (rootTask.focusedTaskModel.value != this) return
 
         rootTask.focusedTaskModel.value = if (childTaskModels.isEmpty()) {
@@ -241,6 +290,11 @@ open class TaskModel(parent: TaskModel?) {
             }
         } else {
             childTaskModels.first()
+        }
+
+        if (addToHistory) {
+            println("add_to_history : moveFocusDown")
+            history.add { moveFocusDown(false) }
         }
     }
 

@@ -5,21 +5,33 @@ class RootTaskModel : TaskModel(null) {
 
     object Resource {
         var tasksCount = 0
-        val rootTask = RootTaskModel()
+        var rootTask = RootTaskModel()
+
+        val history = mutableListOf<() -> Unit>()
+        var undoCount = 0
+
+        fun undo() {
+            rootTask.childTaskModels.removeAll { true }
+            rootTask.createNewTask(false)
+            rootTask.focusedTaskModel = mutableStateOf(rootTask.childTaskModels[0])
+            tasksCount = 0
+
+            undoCount++
+            println(history)
+            for (i in 0 until history.size - undoCount) {
+                history[i].invoke()
+            }
+        }
     }
 
     var focusedTaskModel: MutableState<TaskModel>
-    val text = mutableStateOf("")
-
 
     init {
-        createNewTask()
+        createNewTask(false)
         focusedTaskModel = mutableStateOf(childTaskModels[0])
     }
 
-    override fun createNewTask(taskModel: TaskModel) {}
-
-    override fun createNewTask() {
+    override fun createNewTask(addToHistory: Boolean) {
         childTaskModels.add(TaskModel(this))
     }
 
